@@ -1,181 +1,139 @@
 const { Telegraf, Markup } = require("telegraf");
 require("dotenv").config();
 
-const {
-  mainMenu,
-  backButton,
-  joinKeyboard,
-  troubleshooterKeyboard,
-} = require("./keyboards");
-
+const { mainMenu, backButton, joinKeyboard, troubleshooterKeyboard } = require("./keyboards");
 const { checkProduct } = require("./data/ugcGuidelines");
 const { questions, answers } = require("./data/troubleshooter");
 
-if (!process.env.BOT_TOKEN) {
-  throw new Error("BOT_TOKEN is missing from .env");
-}
-
-if (!process.env.CHANNEL_ID || !process.env.CHANNEL_LINK) {
-  throw new Error("CHANNEL_ID or CHANNEL_LINK is missing from .env");
-}
-
-if (
-  !questions ||
-  typeof questions !== "object" ||
-  Array.isArray(questions) ||
-  !answers ||
-  typeof answers !== "object"
-) {
-  throw new Error(
-    "Invalid troubleshooter.js format. Export questions and answers as objects.",
-  );
+if (!process.env.BOT_TOKEN) throw new Error("BOT_TOKEN is missing from environment variables.");
+if (!process.env.CHANNEL_ID || !process.env.CHANNEL_LINK) throw new Error("CHANNEL_ID or CHANNEL_LINK is missing from environment variables.");
+if (!questions || typeof questions !== "object" || !answers || typeof answers !== "object") {
+  throw new Error("Invalid troubleshooter.js format: export questions and answers objects.");
 }
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-
 const waitingForProduct = new Set();
-const waitingForTroubleshooting = new Set();
 
 const CONTENT = {
+  ugc_content_eligibility: {
+    title: "📸 UGC Content Eligibility",
+    text: `
+<b>Before uploading UGC content</b>
+
+✅ Use original media that you created.
+✅ Keep the product clearly visible and the content well-lit.
+✅ For videos, use a Review, Try-On, Haul, or Voiceover format.
+✅ Follow the applicable product category restrictions.
+
+🚫 The profile message you shared says AI-generated content, reposts, and non-organic clicks are not permitted. The supplied bot guidelines also list Boomerangs and videos stitched from pictures as prohibited.
+
+⚠️ Eligibility can depend on the product category and current Myntra rules. Use <b>Product Eligibility</b> to check the categories loaded in this bot. If no category match is found, verify in the Myntra app rather than assuming it is eligible.
+`,
+  },
   content_guidelines: {
     title: "📋 UGC Content Guidelines",
     text: `
 <b>✨ Basic UGC Guidelines</b>
 
-📱 <b>Video format</b>
-• Prefer portrait orientation (9:16).
-• Videos should be at least 5 seconds long.
-• Highlight the product clearly.
-• Approved formats: Review, Try-On, Haul, or Voiceover.
+🎬 <b>Video</b>
+• Use an approved format: Review, Try-On, Haul, or Voiceover.
+• Keep the product clearly visible and highlighted.
+• The guidelines currently loaded in this bot say videos should be at least 5 seconds long.
 
-📸 <b>Image quality</b>
-• Use a clean, aesthetic background.
+📸 <b>Images</b>
+• Use a clean, well-lit background.
 • Keep the product clearly visible.
-• Avoid watermarks, text overlays, and collage edits.
+• Avoid watermarks, added text, and collage edits.
 • Use colour images, not black-and-white or sepia.
-• Follow the solo-post requirement.
+• Follow the applicable solo-post requirement.
 
-👗 <b>Apparel</b>
-Show both yourself and the product in apparel posts.
+🚫 The profile message you shared says AI-generated content, reposts, and non-organic clicks are not permitted. The supplied bot guidelines also prohibit Boomerangs and videos stitched from pictures.
 
-⚠️ AI-generated content, Boomerangs, and videos stitched from pictures are prohibited under the guidelines supplied for this bot.
+👗 For apparel, the existing guidance in this bot says to show both yourself and the product.
 
-Please check the Myntra app for the latest rules.
+Please check the Myntra app for the latest requirements.
 `,
   },
-
   ugc_rewards: {
     title: "💰 UGC Rewards & Earnings",
     text: `
-<b>💰 Understand your UGC rewards</b>
+<b>💰 Current policy information shared with this bot</b>
 
-Your rewards may depend on:
-• Creator level.
-• Eligible image and video posts.
-• Applicable reward rules.
-• Approval of your content.
+• Effective January 2026, fixed pay is capped at the first <b>15 posts over a creator's lifetime</b>, according to the Myntra support replies you shared.
+• After that threshold, creators are eligible for variable pay based on clicks and tier.
+• Click-based incentives can be tracked in the <b>Monthwise Breakup</b> section of the dashboard.
+• Payouts do not apply to deleted posts, according to the support reply.
 
-<b>Before posting:</b>
-✅ Check product eligibility.
-✅ Follow content guidelines.
-✅ Check your UGC dashboard.
-
-⚠️ Reward amounts and eligibility can change. Check the Myntra app for current rates.
-
-UGC rewards and affiliate commissions are separate.
+UGC rewards and affiliate commissions are separate. Policy and reward details may change; check the current Myntra UGC Levels & Rewards page and your dashboard.
 `,
   },
-
   post_rejected: {
     title: "❌ Post Rejected?",
     text: `
-<b>🔍 Check these common issues</b>
+<b>🔍 What to check</b>
 
 📸 <b>Images</b>
-• Product is not clearly visible.
-• Background is cluttered.
-• Watermarks, text overlays, or collage edits are present.
-• Image orientation or quality does not meet the guidelines.
+• Product visibility and lighting.
+• Watermarks, added text, or collage edits.
+• Colour and the applicable solo-post rule.
 
 🎬 <b>Videos</b>
-• Video is shorter than 5 seconds.
-• Product is not highlighted.
-• Format is not approved.
-• Video is stitched from pictures.
+• Whether the product is clearly highlighted.
+• Whether the format is Review, Try-On, Haul, or Voiceover.
+• Whether the content is original and follows the current rules.
 
 <b>What to do:</b>
 1. Check the rejection reason in the Myntra app.
-2. Correct the identified issue.
+2. Correct the specific issue.
 3. Re-upload only if permitted.
 
-⚠️ Re-uploading does not guarantee approval or payment.
+⚠️ Re-uploading does not guarantee approval or payment. The support reply says payouts do not apply to deleted posts.
 `,
   },
-
   myncash: {
     title: "💳 MynCash & Payments",
     text: `
-<b>💳 Check your payment issue</b>
+<b>💳 Check your payment</b>
 
-First, identify your earning type:
+📊 To review incentives, open your Myntra profile → <b>Payment & Currencies → Myntra Credits & MynCash</b>. Check the <b>Monthwise Breakup</b> section for click-based incentives.
 
-🛍️ <b>UGC rewards</b>
-Check your UGC dashboard and reward status.
+According to the Myntra support reply you shared, a status of <b>In Progress</b> under Payment & Currencies means the payout has already been processed.
 
-🤝 <b>Affiliate commission</b>
-Check eligible orders and payout status.
+Remember:
+• Effective January 2026, fixed pay is capped at the first 15 posts over a creator's lifetime, according to the support reply.
+• After that, variable pay is based on clicks and tier.
+• Payouts do not apply to deleted posts.
+• UGC rewards and affiliate commissions are separate.
 
-Also verify:
-• Bank details.
-• KYC and PAN, where required.
-• Applicable payout cycle.
-• Any required tax documentation.
-
-⚠️ MynCash rewards and affiliate payouts are different.
-
-For unresolved issues, contact support through the Myntra app's Help Center.
+For unresolved issues, contact Myntra through the Help Center and share relevant screenshots.
 `,
   },
-
   affiliate: {
     title: "🤝 Affiliate Program",
     text: `
 <b>🤝 Affiliate earnings</b>
 
-Affiliate commissions may depend on eligible purchases made through your links.
+The Level 4 Trendsetter screenshot you shared displays <b>12% commission per order</b> purchased through shared links. Actual commissions may depend on current program terms and eligible orders.
 
-Remember:
-• Rates can vary by category and applicable rules.
-• Cancelled or returned orders may not qualify.
-• Some categories may be excluded.
-• Payouts may require KYC, bank details, or tax documents.
-
-Check your current affiliate dashboard for the latest terms.
-
-UGC rewards and affiliate commissions are separate.
+Keep in mind:
+• UGC rewards and affiliate commissions are separate.
+• Use original content and avoid non-organic clicks.
+• Check your current affiliate dashboard for the applicable rate and terms.
 `,
   },
-
   levels: {
-    title: "🏆 Creator Levels",
+    title: "🏆 Creator Levels & Benefits",
     text: `
-<b>🏆 Creator levels</b>
+<b>🏆 Level 4 — Trendsetter</b>
 
-The levels listed in the information available to this bot are:
+According to the screenshot you shared:
+⭐ Create <b>1 image post and 1 video post per month</b> to retain this level.
+🤝 Affiliate commission: <b>12% per order</b> purchased through shared links.
+💰 Engagement-based rewards: <b>2 MynCash per click</b> on your post.
 
-🌱 Curator
-✨ Stylist
-💎 Maestro
-👑 Trendsetter
-
-Your level may affect certain benefits or earning opportunities.
-
-Open your Myntra UGC dashboard to check your current level and applicable benefits.
-
-⚠️ Criteria and benefits may change.
+Check your own Myntra UGC dashboard for your current level and applicable benefits. The information above reflects the screenshot provided and may change under current program terms.
 `,
   },
-
   other: {
     title: "📞 Other Help",
     text: `
@@ -184,38 +142,24 @@ Open your Myntra UGC dashboard to check your current level and applicable benefi
 Keep these details ready:
 • Affected product or post.
 • Screenshots of the issue.
-• Relevant earning period.
+• Relevant earning month.
 • Existing support ticket number.
 
 Open the Myntra app and visit the Help Center to raise or follow up on your issue.
 
-🔒 Never share your password or OTP.
+🔒 Never share your password, OTP, Telegram bot token, or webhook secret.
 `,
   },
 };
 
 function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 async function isChannelMember(userId) {
   try {
-    const member = await bot.telegram.getChatMember(
-      process.env.CHANNEL_ID,
-      userId,
-    );
-
-    return (
-      member.status === "creator" ||
-      member.status === "administrator" ||
-      member.status === "member" ||
-      (member.status === "restricted" && member.is_member === true)
-    );
+    const member = await bot.telegram.getChatMember(process.env.CHANNEL_ID, userId);
+    return member.status === "creator" || member.status === "administrator" || member.status === "member" || (member.status === "restricted" && member.is_member === true);
   } catch (error) {
     console.error("Membership check failed:", error.message);
     return false;
@@ -223,302 +167,141 @@ async function isChannelMember(userId) {
 }
 
 async function showJoinPrompt(ctx) {
-  await ctx.reply(
-    `
-🌸 <b>Welcome to Myntra GlamCare!</b>
-<i>Powered by MynStyle07</i>
-
-To access the bot:
-1️⃣ Join our Telegram channel.
-2️⃣ Subscribe to our YouTube channel.
-3️⃣ Tap the verification button.
-
-🔒 Telegram membership is checked automatically. YouTube subscription is not automatically verified.
-`,
-    {
-      parse_mode: "HTML",
-      ...joinKeyboard(
-        process.env.CHANNEL_LINK,
-        process.env.YOUTUBE_CHANNEL_LINK,
-      ),
-    },
+  return ctx.reply(
+    "🌸 <b>Welcome to MyntraUGCCare!</b>\n<i>Powered by MynStyle07</i>\n\nTo access the bot:\n1️⃣ Join our Telegram channel.\n2️⃣ Subscribe to our YouTube channel.\n3️⃣ Tap the verification button.\n\n🔒 Telegram membership is checked automatically. YouTube subscription is not automatically verified.",
+    { parse_mode: "HTML", ...joinKeyboard(process.env.CHANNEL_LINK, process.env.YOUTUBE_CHANNEL_LINK) },
   );
 }
 
 async function showMainMenu(ctx) {
-  await ctx.reply(
-    `
-💖 <b>MYNTRA GLAMCARE</b>
-<i>Powered by MynStyle07</i>
-
-Your personal guide to Myntra UGC!
-
-🛍️ Product eligibility
-📋 Content guidelines
-💰 Rewards and earnings
-❌ Rejected posts
-💳 MynCash and payments
-🛠️ Troubleshooting
-
-<b>Choose an option below:</b>
-`,
-    {
-      parse_mode: "HTML",
-      ...mainMenu,
-    },
+  return ctx.reply(
+    "💖 <b>MYNTRA UGC CARE</b>\n<i>Powered by MynStyle07</i>\n\nYour guide to Myntra UGC!\n\n🛍️ Product eligibility\n📸 UGC content eligibility\n📋 Content guidelines\n💰 Rewards and earnings\n❌ Rejected posts\n💳 MynCash and payments\n🛠️ Troubleshooting\n\n<b>Choose an option below:</b>",
+    { parse_mode: "HTML", ...mainMenu },
   );
 }
 
 async function sendSection(ctx, key) {
   const section = CONTENT[key];
-
-  if (!section) {
-    return ctx.reply("Section not found.", backButton);
-  }
-
-  return ctx.reply(`<b>${section.title}</b>\n${section.text}`, {
-    parse_mode: "HTML",
-    ...backButton,
-  });
+  if (!section) return ctx.reply("Sorry, this section is unavailable.", backButton);
+  return ctx.reply(`<b>${section.title}</b>\n${section.text}`, { parse_mode: "HTML", ...backButton });
 }
 
-async function showTroubleshooter(ctx, questionKey) {
-  const question = questions[questionKey];
-
-  if (!question) {
-    return ctx.reply(
-      "Sorry, this troubleshooting question is unavailable.",
-      backButton,
-    );
+async function showTroubleshooter(ctx, key) {
+  // Leaf nodes are answers, not questions. This fixes the old dead-end buttons.
+  if (answers[key]) {
+    return ctx.reply(answers[key], {
+      parse_mode: "HTML",
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback("🔄 Start Again", "troubleshooter")],
+        [Markup.button.callback("🏠 Main Menu", "main_menu")],
+      ]),
+    });
   }
-
+  const question = questions[key];
+  if (!question) return ctx.reply("Sorry, this troubleshooting option is unavailable.", backButton);
   waitingForProduct.delete(ctx.from.id);
-  waitingForTroubleshooting.add(ctx.from.id);
-
-  return ctx.reply(question.text, {
-    parse_mode: "HTML",
-    ...troubleshooterKeyboard(question),
-  });
+  return ctx.reply(question.text, { parse_mode: "HTML", ...troubleshooterKeyboard(question) });
 }
 
-// Restrict features to Telegram channel members.
 bot.use(async (ctx, next) => {
   const isStart = ctx.message?.text?.trim().startsWith("/start");
   const isMembershipCheck = ctx.callbackQuery?.data === "check_membership";
-
-  if (isStart || isMembershipCheck) {
-    return next();
+  if (isStart || isMembershipCheck || !ctx.from) return next();
+  if (!(await isChannelMember(ctx.from.id))) {
+    if (ctx.callbackQuery) await ctx.answerCbQuery().catch(() => {});
+    return showJoinPrompt(ctx);
   }
-
-  if (!ctx.from) {
-    return next();
-  }
-
-  const member = await isChannelMember(ctx.from.id);
-
-  if (!member) {
-    await showJoinPrompt(ctx);
-    return;
-  }
-
   return next();
 });
 
 bot.start(async (ctx) => {
   waitingForProduct.delete(ctx.from.id);
-  waitingForTroubleshooting.delete(ctx.from.id);
-
-  if (!(await isChannelMember(ctx.from.id))) {
-    return showJoinPrompt(ctx);
-  }
-
+  if (!(await isChannelMember(ctx.from.id))) return showJoinPrompt(ctx);
   return showMainMenu(ctx);
 });
 
 bot.action("check_membership", async (ctx) => {
   await ctx.answerCbQuery();
-
   if (!(await isChannelMember(ctx.from.id))) {
-    return ctx.reply(
-      "❌ I couldn't verify your Telegram membership. Join the channel and try again.",
-      {
-        ...joinKeyboard(
-          process.env.CHANNEL_LINK,
-          process.env.YOUTUBE_CHANNEL_LINK,
-        ),
-      },
-    );
+    return ctx.reply("❌ I couldn't verify your Telegram membership. Please join the channel and try again.", { ...joinKeyboard(process.env.CHANNEL_LINK, process.env.YOUTUBE_CHANNEL_LINK) });
   }
-
   await ctx.reply("✅ Telegram membership verified!");
   return showMainMenu(ctx);
 });
 
 bot.action("main_menu", async (ctx) => {
   await ctx.answerCbQuery();
-
   waitingForProduct.delete(ctx.from.id);
-  waitingForTroubleshooting.delete(ctx.from.id);
-
   return showMainMenu(ctx);
 });
 
 bot.action("product_eligibility", async (ctx) => {
   await ctx.answerCbQuery();
-
   waitingForProduct.add(ctx.from.id);
-  waitingForTroubleshooting.delete(ctx.from.id);
-
-  return ctx.reply(
-    `
-🛍️ <b>Product Eligibility Checker</b>
-
-Send a product name, for example:
-• Soap
-• Anti-dandruff shampoo
-• Face wash
-• Body lotion
-
-I'll return one of these results:
-🖼️ Images + Video
-🎥 Video only
-🚫 Nothing
-`,
-    {
-      parse_mode: "HTML",
-      ...backButton,
-    },
-  );
+  return ctx.reply("🛍️ <b>Product Eligibility Checker</b>\n\nSend a product/category name, for example:\n• Soap\n• Shampoo\n• Face wash\n• Body lotion\n\nResults currently supported by the loaded rules:\n🖼️ Images + Video (only if a verified rule is added)\n🎥 Video only\n🚫 Nothing\n\nIf no category is found, I'll ask you to verify it rather than guess.", { parse_mode: "HTML", ...backButton });
 });
 
 for (const key of Object.keys(CONTENT)) {
   bot.action(key, async (ctx) => {
     await ctx.answerCbQuery();
-
     waitingForProduct.delete(ctx.from.id);
-    waitingForTroubleshooting.delete(ctx.from.id);
-
     return sendSection(ctx, key);
   });
 }
 
-// Start troubleshooting using the object-based question structure.
 bot.action("troubleshooter", async (ctx) => {
   await ctx.answerCbQuery();
+  waitingForProduct.delete(ctx.from.id);
   return showTroubleshooter(ctx, "start");
 });
 
-// Register each possible troubleshooting destination.
-// This correctly iterates over object keys, not the object itself.
-for (const questionKey of Object.keys(questions)) {
-  bot.action(`trouble_${questionKey}`, async (ctx) => {
+for (const key of new Set([...Object.keys(questions), ...Object.keys(answers)])) {
+  bot.action(`trouble_${key}`, async (ctx) => {
     await ctx.answerCbQuery();
-    return showTroubleshooter(ctx, questionKey);
+    return showTroubleshooter(ctx, key);
   });
 }
 
-// Handle product names and text messages.
 bot.on("text", async (ctx) => {
   const userId = ctx.from.id;
   const message = ctx.message.text.trim();
+  if (!message || message.startsWith("/")) return;
+  if (!waitingForProduct.has(userId)) return;
 
-  if (message.startsWith("/")) return;
-
-  if (waitingForProduct.has(userId)) {
-    waitingForProduct.delete(userId);
-
-    try {
-      const result = checkProduct(message);
-
-      if (!result || !result.found) {
-        return ctx.reply(
-          `🔎 I couldn't find a confident match for "${escapeHtml(message)}".\n\nTry a more specific product name.`,
-          {
-            parse_mode: "HTML",
-            ...Markup.inlineKeyboard([
-              [
-                Markup.button.callback(
-                  "🔄 Try Another Product",
-                  "product_eligibility",
-                ),
-              ],
-              [Markup.button.callback("🏠 Main Menu", "main_menu")],
-            ]),
-          },
-        );
-      }
-
-      const image = Boolean(result.image);
-      const video = Boolean(result.video);
-
-      let decision;
-      let explanation;
-
-      if (image && video) {
-        decision = "🖼️ Images + Video";
-        explanation = "Both image and video are marked as allowed.";
-      } else if (video) {
-        decision = "🎥 Video only";
-        explanation = "Video is marked as allowed; image is not.";
-      } else {
-        decision = "🚫 Nothing";
-        explanation = "Neither image nor video is marked as allowed.";
-      }
-
-      return ctx.reply(
-        `
-🛍️ <b>PRODUCT ELIGIBILITY RESULT</b>
-
-📦 <b>Product:</b> ${escapeHtml(result.product || message)}
-
-━━━━━━━━━━━━━━━━━━
-<b>${decision}</b>
-━━━━━━━━━━━━━━━━━━
-
-${explanation}
-
-⚠️ Confirm uncertain cases using the latest Myntra UGC rules.
-`,
-        {
-          parse_mode: "HTML",
-          ...Markup.inlineKeyboard([
-            [
-              Markup.button.callback(
-                "🔄 Check Another Product",
-                "product_eligibility",
-              ),
-            ],
-            [Markup.button.callback("📋 UGC Guidelines", "content_guidelines")],
-            [Markup.button.callback("🏠 Main Menu", "main_menu")],
-          ]),
-        },
-      );
-    } catch (error) {
-      console.error("Product eligibility error:", error);
-      return ctx.reply(
-        "⚠️ Something went wrong while checking the product.",
-        backButton,
-      );
+  try {
+    const result = checkProduct(message);
+    if (!result.found) {
+      return ctx.reply(`🔎 I couldn't match <b>${escapeHtml(message)}</b> to a category in the loaded rules.\n\nPlease try a category name such as Soap, Shampoo, Face Wash, or Body Lotion. If it still doesn't match, check the latest Myntra UGC rules in the app.`, {
+        parse_mode: "HTML",
+        ...Markup.inlineKeyboard([
+          [Markup.button.callback("🔄 Check Another Product", "product_eligibility")],
+          [Markup.button.callback("🏠 Main Menu", "main_menu")],
+        ]),
+      });
     }
-  }
-
-  if (waitingForTroubleshooting.has(userId)) {
-    return ctx.reply(
-      "💗 Please select one of the troubleshooting options above.",
-      backButton,
-    );
+    waitingForProduct.delete(userId);
+    const decision = result.result || (result.image && result.video ? "Images + Video" : result.video ? "Video only" : "Nothing");
+    const explanation = decision === "Nothing"
+      ? "This category is listed as not eligible for image or video posts in the rules loaded into this bot."
+      : decision === "Video only"
+        ? "This category is listed as video-only in the rules loaded into this bot."
+        : "This category is listed as allowing images and video in the rules loaded into this bot.";
+    return ctx.reply(`🛍️ <b>PRODUCT ELIGIBILITY RESULT</b>\n\n📦 <b>Category:</b> ${escapeHtml(result.product || message)}\n\n━━━━━━━━━━━━━━━━━━\n<b>${escapeHtml(decision)}</b>\n━━━━━━━━━━━━━━━━━━\n\n${explanation}\n\n⚠️ These results reflect the categories currently loaded in this bot. Check Myntra's latest rules if unsure.`, {
+      parse_mode: "HTML",
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback("🔄 Check Another Product", "product_eligibility")],
+        [Markup.button.callback("📋 UGC Guidelines", "content_guidelines")],
+        [Markup.button.callback("🏠 Main Menu", "main_menu")],
+      ]),
+    });
+  } catch (error) {
+    console.error("Product eligibility error:", error.message);
+    return ctx.reply("⚠️ Something went wrong while checking that category. Please try again.", backButton);
   }
 });
 
 bot.catch((error, ctx) => {
-  console.error(`Error processing update ${ctx.update?.update_id}:`, error);
-});
-
-bot.catch((error, ctx) => {
-  console.error(
-    `Error processing update ${ctx.update?.update_id}:`,
-    error
-  );
+  console.error(`Error processing update ${ctx.update?.update_id}:`, error.message);
 });
 
 module.exports = bot;

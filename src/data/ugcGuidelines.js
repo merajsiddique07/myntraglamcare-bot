@@ -1,129 +1,36 @@
-const blockedProducts = [
-  "Soap",
-  "Free Gifts",
-  "Innerwear Vests",
-  "Bra",
-  "Shaving and Hair Removal",
-  "Water Bottle",
-  "Toothpaste and Tooth Powder",
-  "Baby Body Wash and Soap",
-  "Sanitary Napkins",
-  "Baby Wipes and Buds",
-];
+const { blockedProducts, videoOnlyProducts, normalize, aliases } = require("./productRules");
 
-const videoOnlyProducts = [
-  "Face Wash and Cleanser",
-  "Day Cream",
-  "Perfume",
-  "Face Sunscreen",
-  "Shampoo",
-  "Serum and Gel",
-  "Body Wash and Shower Gel",
-  "Deodorant",
-  "Body Cream and Lotion",
-  "Mask and Peel",
-  "Roll-Ons",
-  "Hair Serum",
-  "Body Mist and Spray",
-  "Conditioner",
-  "Foundation",
-  "Compact",
-  "Toner",
-  "Hair Oil",
-  "Face Scrub and Exfoliator",
-  "Concealer",
-  "Face Primer",
-  "Hair Masks",
-  "Hair Colour",
-  "BB and CC Cream",
-  "Hair Brush and Comb",
-  "Skin Care Combo",
-  "Body Sunscreen",
-  "Hair Spray",
-  "Nail Polish Remover",
-  "Fragrance Gift Set",
-  "Talcum Powder",
-  "Night Cream",
-  "Under Eye Creams and Serums",
-  "Trimmer",
-  "Hair Gels and Wax",
-  "Setting Spray",
-  "Body Scrub and Exfoliator",
-  "Facial Kit",
-  "Makeup Remover",
-  "Facial Wipes and Tissues",
-  "Sheet Masks",
-  "Body Wax and Essentials",
-  "Hair Care Combo",
-  "Hair Accessory",
-];
-
-function normalize(text) {
-  return text
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-const aliases = {
-  "face wash": "face wash and cleanser",
-  "baby soap": "baby body wash and soap",
-  "hair gel": "hair gels and wax",
-  "under eye serum": "under eye creams and serums",
-  "hair colour": "hair colour",
-  "hair color": "hair colour",
-  "body lotion": "body cream and lotion",
-  "sunscreen": "face sunscreen",
-  "hair comb": "hair brush and comb",
-  "toothpaste": "toothpaste and tooth powder",
-  "shaving cream": "shaving and hair removal",
-  "sanitary pad": "sanitary napkins",
-  "sanitary pads": "sanitary napkins",
-};
+const blockedNormalized = blockedProducts.map((name) => ({ name, normalized: normalize(name) }));
+const videoOnlyNormalized = videoOnlyProducts.map((name) => ({ name, normalized: normalize(name) }));
 
 function checkProduct(productName) {
   const input = normalize(productName);
+  if (!input) return { found: false, message: "Please enter a product name." };
 
-  if (!input) {
-    return {
-      found: false,
-      message: "Please enter a product name.",
-    };
-  }
+  const searchName = aliases[input] ? normalize(aliases[input]) : input;
 
-  const searchName = aliases[input] || input;
+  // Exact matches first to avoid accidentally matching a different category.
+  const blocked = blockedNormalized.find((item) => item.normalized === searchName);
+  if (blocked) return { found: true, product: blocked.name, image: false, video: false, result: "Nothing" };
 
-  const blocked = blockedProducts.find(
-    (product) => normalize(product) === searchName
-  );
+  const videoOnly = videoOnlyNormalized.find((item) => item.normalized === searchName);
+  if (videoOnly) return { found: true, product: videoOnly.name, image: false, video: true, result: "Video only" };
 
-  if (blocked) {
-    return {
-      found: true,
-      product: blocked,
-      image: false,
-      video: false,
-    };
-  }
+  // Allow a user's longer product name to match a known category, but only when
+  // the complete category phrase occurs in the input (e.g. "XYZ shampoo").
+  const blockedInPhrase = blockedNormalized.find((item) => item.normalized.length >= 4 && (` ${searchName} `).includes(` ${item.normalized} `));
+  if (blockedInPhrase) return { found: true, product: blockedInPhrase.name, image: false, video: false, result: "Nothing" };
 
-  const videoOnly = videoOnlyProducts.find(
-    (product) => normalize(product) === searchName
-  );
+  const videoInPhrase = videoOnlyNormalized.find((item) => item.normalized.length >= 4 && (` ${searchName} `).includes(` ${item.normalized} `));
+  if (videoInPhrase) return { found: true, product: videoInPhrase.name, image: false, video: true, result: "Video only" };
 
-  if (videoOnly) {
-    return {
-      found: true,
-      product: videoOnly,
-      image: false,
-      video: true,
-    };
-  }
-
+  // Per the owner-provided rule: any category not explicitly listed as blocked or video-only allows both formats.
   return {
-    found: false,
-    product: productName,
+    found: true,
+    product: String(productName).trim(),
+    image: true,
+    video: true,
+    result: "Images + Video",
   };
 }
 

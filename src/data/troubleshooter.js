@@ -1,113 +1,93 @@
 const questions = {
   start: {
-    text: "💗 Let's find out why your UGC post might have been rejected!\n\nWhat type of post was rejected?",
+    text: "💗 Let's troubleshoot your Myntra UGC issue.\n\nWhat do you need help with?",
     options: [
-      { text: "📸 Image Post", next: "image" },
-      { text: "🎬 Video Post", next: "video" },
-      { text: "🛍️ Product Eligibility", next: "product" },
+      { text: "📸 Image post rejected", next: "image" },
+      { text: "🎬 Video post rejected", next: "video" },
+      { text: "💰 Payment or earnings", next: "payment" },
+      { text: "🛍️ Product eligibility", next: "product" },
+      { text: "👑 Level and benefits", next: "level" },
+      { text: "👤 Profile guidelines", next: "profile" },
     ],
   },
-
   image: {
-    text: "📸 Check your image against these guidelines.\n\nDoes your image contain a watermark, text overlay, or collage edit?",
+    text: "📸 Check your image. Does it contain a watermark, added text, or a collage edit?",
     options: [
       { text: "✅ No", next: "image_quality" },
       { text: "❌ Yes", next: "watermark" },
     ],
   },
-
   image_quality: {
-    text: "🔎 Is your image in portrait 9:16 orientation and high resolution?",
-    options: [
-      { text: "✅ Yes", next: "image_product" },
-      { text: "❌ No", next: "orientation" },
-    ],
-  },
-
-  image_product: {
-    text: "🛍️ Is at least 60% of the product visible?",
+    text: "🔎 Is the product clearly visible in a clean, well-lit image?",
     options: [
       { text: "✅ Yes", next: "image_colour" },
       { text: "❌ No", next: "visibility" },
     ],
   },
-
   image_colour: {
-    text: "🎨 Is your image colourful, with no black-and-white or sepia filter?",
-    options: [
-      { text: "✅ Yes", next: "image_final" },
-      { text: "❌ No", next: "colour" },
-    ],
-  },
-
-  image_final: {
-    text: "👤 Does your image show only you, without a group of people?",
+    text: "🎨 Is the image in colour (not black-and-white or sepia) and does it follow the solo-post requirement?",
     options: [
       { text: "✅ Yes", next: "image_done" },
-      { text: "❌ No", next: "group" },
+      { text: "❌ No", next: "image_profile_issue" },
     ],
   },
-
   video: {
-    text: "🎬 Let's check your video!\n\nIs your video at least 5 seconds long?",
+    text: "🎬 Is your video at least 5 seconds long?",
     options: [
       { text: "✅ Yes", next: "video_format" },
       { text: "❌ No", next: "video_length" },
     ],
   },
-
   video_format: {
-    text: "💗 Does your video use an approved format: Review, Try-On, Haul, or Voiceover?",
+    text: "💗 Is it a Review, Try-On, Haul, or Voiceover, with the product clearly highlighted?",
     options: [
-      { text: "✅ Yes", next: "video_product" },
+      { text: "✅ Yes", next: "video_authentic" },
       { text: "❌ No", next: "video_type" },
     ],
   },
-
-  video_product: {
-    text: "🛍️ Is the product clearly visible and highlighted in your video?",
-    options: [
-      { text: "✅ Yes", next: "video_authentic" },
-      { text: "❌ No", next: "visibility" },
-    ],
-  },
-
   video_authentic: {
-    text: "🤖 Is your video authentic—not AI-generated, a Boomerang, or stitched together from pictures?",
+    text: "🤖 Is the video original—not AI-generated, a repost, a Boomerang, or stitched together from pictures?",
     options: [
       { text: "✅ Yes", next: "video_done" },
       { text: "❌ No", next: "video_prohibited" },
     ],
   },
-
-  product: {
-    text: "🛍️ Product eligibility can affect whether a post is accepted.\n\nCheck the Product Eligibility option in the main menu before uploading.",
+  payment: {
+    text: "💰 Which payment issue are you facing?",
     options: [
-      { text: "💗 Check Another Issue", next: "start" },
+      { text: "Fixed pay for posts", next: "fixed_pay" },
+      { text: "Payment says In Progress", next: "in_progress" },
+      { text: "Payment for deleted post", next: "deleted_post" },
+      { text: "Find my earnings", next: "find_earnings" },
     ],
+  },
+  product: {
+    text: "🛍️ Use Product Eligibility in the main menu and enter the product category. Unknown categories are not automatically treated as eligible; check the latest Myntra rules if no match is found.",
+    options: [{ text: "💗 Back to troubleshooting", next: "start" }],
+  },
+  level: {
+    text: "🏆 Your current level and benefits are shown in the Myntra UGC dashboard. The supplied Level 4 screenshot says Trendsetter creators should create 1 image and 1 video post per month to retain that level.",
+    options: [{ text: "💗 Back to troubleshooting", next: "start" }],
+  },
+  profile: {
+    text: "👤 Use original media only. Avoid AI-generated content, reposts, and non-organic clicks. Keep your profile updated with high-quality, well-lit content. Non-compliance may affect UGC and Affiliate program eligibility, according to the message you shared.",
+    options: [{ text: "💗 Back to troubleshooting", next: "start" }],
   },
 };
 
 const answers = {
-  watermark: "🚫 Your post may violate the watermark/text-overlay or collage-edit rule. Use an original image without watermarks or added text.",
-
-  orientation: "📱 Your image should use portrait 9:16 orientation and high resolution, according to your supplied guidelines.",
-
-  visibility: "👀 Make the product clearly visible. Your supplied guidelines state that at least 60% of the product should be visible.",
-
-  colour: "🎨 Use a colourful image. Black-and-white and sepia posts are not allowed under your supplied guidelines.",
-
-  group: "👤 Your supplied guidelines specify solo posts. Try a post featuring only yourself.",
-
-  video_length: "🎬 Your supplied guidelines state that videos must be at least 5 seconds long, with the product clearly highlighted.",
-
-  video_type: "💗 Use one of the approved video formats: Review, Try-On, Haul, or Voiceover.",
-
-  video_prohibited: "🚫 Your supplied guidelines prohibit AI-generated content, Boomerangs, and videos stitched together from pictures.",
-
-  image_done: "💗 Your answers match the image checks in this troubleshooter. However, other rules—including product eligibility—may still affect approval.",
-
-  video_done: "💗 Your answers match the video checks in this troubleshooter. However, other rules—including product eligibility—may still affect approval.",
+  watermark: "🚫 Remove watermarks, added text, and collage edits. Use original content and follow the current image guidelines.",
+  visibility: "👀 Make the product clearly visible and use a clean, well-lit image. Your supplied bot guidelines previously mentioned a 60% visibility rule, but verify that requirement in the current Myntra rules before relying on it.",
+  image_profile_issue: "📸 Use a colour image and follow the solo-post requirement in the guidelines supplied for this bot. Check the latest Myntra instructions if you're unsure.",
+  video_length: "🎬 The guidelines currently loaded in this bot say videos should be at least 5 seconds long. Check the rejection reason in the Myntra app too.",
+  video_type: "💗 Use an approved format: Review, Try-On, Haul, or Voiceover. Keep the product clearly highlighted.",
+  video_prohibited: "🚫 The profile message you shared says to use original media only and disallows AI-generated content and reposts. Your supplied bot guidelines also disallow Boomerangs and videos stitched from pictures.",
+  image_done: "✅ Your answers match the checks in this flow. This does not guarantee approval; product eligibility and other current Myntra rules may also apply.",
+  video_done: "✅ Your answers match the checks in this flow. This does not guarantee approval; product eligibility and other current Myntra rules may also apply.",
+  fixed_pay: "💰 According to the Myntra support reply you shared, effective January 2026, fixed pay is capped at a creator's first 15 posts over their lifetime. After that, variable pay is based on clicks and tier. Check the current UGC Levels & Rewards policy for details.",
+  in_progress: "💳 The Myntra support reply you shared says that if the payment status shows ‘In Progress’ under Payment & Currencies, the payout has already been processed. Check your payment details and contact Myntra Help Center if it still appears unresolved.",
+  deleted_post: "⚠️ The Myntra support reply you shared says payouts do not apply to deleted posts.",
+  find_earnings: "📊 Open your Myntra profile, then Payment & Currencies → Myntra Credits & MynCash. The support reply you shared says incentives based on clicks can be tracked under the Monthwise Breakup section.",
 };
 
 module.exports = { questions, answers };
