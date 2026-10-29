@@ -514,16 +514,11 @@ bot.catch((error, ctx) => {
   console.error(`Error processing update ${ctx.update?.update_id}:`, error);
 });
 
-bot
-  .launch()
-  .then(() => {
-    console.log("🌸 Myntra GlamCare Bot is running!");
-    console.log("✨ Powered by MynStyle07");
-  })
-  .catch((error) => {
-    console.error("Failed to start bot:", error);
-    process.exit(1);
-  });
+bot.catch((error, ctx) => {
+  console.error(
+    `Error processing update ${ctx.update?.update_id}:`,
+    error
+  );
+});
 
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
+module.exports = bot;
